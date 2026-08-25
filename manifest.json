@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "krakeneyes.live-scores",
   "name": "Live Scores",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "KrakenEyes",
   "license": "MIT",
   "description": "Live scores, today's schedule and standings for soccer, hockey, basketball, football, baseball, golf, motorsport and combat sports — men's, women's and international competitions — with customizable notifications.",
@@ -30,21 +30,33 @@
     "defaultSection": "right",
     "defaults": {
       "refreshIntervalSec": 20,
+      "liveRefreshIntervalSec": 5,
       "scheduleRefreshIntervalMin": 5,
       "compactBarLabel": true,
       "language": "en",
-      "footballName": "soccer"
+      "footballName": "soccer",
+      "heroWidget": "trophy"
     },
     "schema": [
       {
         "key": "refreshIntervalSec",
         "type": "integer",
-        "label": "Live match refresh (seconds)",
-        "description": "How often ESPN is polled for followed leagues with a match today.",
+        "label": "Idle refresh (seconds)",
+        "description": "How often ESPN is polled for followed leagues with a match today but nothing live right now.",
         "min": 10,
         "max": 120,
         "step": 5,
         "defaultValue": 20
+      },
+      {
+        "key": "liveRefreshIntervalSec",
+        "type": "integer",
+        "label": "Live match refresh (seconds)",
+        "description": "How often ESPN is polled while at least one followed match is actually in progress — kept low so goals show up fast.",
+        "min": 3,
+        "max": 30,
+        "step": 1,
+        "defaultValue": 5
       },
       {
         "key": "scheduleRefreshIntervalMin",
@@ -84,6 +96,17 @@
           { "value": "european_football", "label": "European Football" }
         ],
         "defaultValue": "soccer"
+      },
+      {
+        "key": "heroWidget",
+        "type": "enum",
+        "label": "Panel header icon",
+        "description": "Trophy icon, or a live score / countdown widget you can click to expand.",
+        "options": [
+          { "value": "trophy", "label": "Trophy icon" },
+          { "value": "scoreboard", "label": "Score bar / countdown" }
+        ],
+        "defaultValue": "trophy"
       }
     ]
   }

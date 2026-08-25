@@ -132,9 +132,22 @@ Item {
         onClicked: if (root.hostWidget && root.service) root.hostWidget.saveSetting("compactBarLabel", !root.service.compactBarLabel)
       }
 
+      Picker {
+        width: parent.width
+        label: Strings.t(root.language, "heroWidgetLabel")
+        options: [
+          { value: "trophy", label: Strings.t(root.language, "heroWidgetTrophy") },
+          { value: "scoreboard", label: Strings.t(root.language, "heroWidgetScoreboard") }
+        ]
+        value: root.service ? root.service.heroWidget : "trophy"
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        onChanged: function(v) { if (root.hostWidget) root.hostWidget.saveSetting("heroWidget", v) }
+      }
+
       NumberField {
         width: parent.width
-        label: Strings.t(root.language, "liveRefreshRate")
+        label: Strings.t(root.language, "idleRefreshRate")
         value: root.service ? root.service.refreshIntervalSec : 20
         from: 10
         to: 120
@@ -142,6 +155,18 @@ Item {
         foreground: root.foreground
         fontFamily: root.fontFamily
         onModified: function(v) { if (root.hostWidget) root.hostWidget.saveSetting("refreshIntervalSec", v) }
+      }
+
+      NumberField {
+        width: parent.width
+        label: Strings.t(root.language, "liveRefreshRate")
+        value: root.service ? root.service.liveRefreshIntervalSec : 5
+        from: 3
+        to: 30
+        stepSize: 1
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        onModified: function(v) { if (root.hostWidget) root.hostWidget.saveSetting("liveRefreshIntervalSec", v) }
       }
 
       NumberField {

@@ -66,10 +66,12 @@ function parseMatch(event, leagueSlug) {
     homeTeamId: String(homeTeam.id || ""),
     homeTeamName: String(homeTeam.shortDisplayName || homeTeam.displayName || homeTeam.name || ""),
     homeTeamAbbr: String(homeTeam.abbreviation || ""),
+    homeTeamLogo: String((homeTeam.logos && homeTeam.logos[0] && homeTeam.logos[0].href) || homeTeam.logo || ""),
     homeScore: home.score !== undefined && home.score !== null ? String(home.score) : "",
     awayTeamId: String(awayTeam.id || ""),
     awayTeamName: String(awayTeam.shortDisplayName || awayTeam.displayName || awayTeam.name || ""),
     awayTeamAbbr: String(awayTeam.abbreviation || ""),
+    awayTeamLogo: String((awayTeam.logos && awayTeam.logos[0] && awayTeam.logos[0].href) || awayTeam.logo || ""),
     awayScore: away.score !== undefined && away.score !== null ? String(away.score) : "",
     lastPlay: String((situation.lastPlay && situation.lastPlay.text) || situation.downDistanceText || "")
   }

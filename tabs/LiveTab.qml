@@ -170,6 +170,15 @@ Item {
         Layout.preferredWidth: Style.space(36)
       }
 
+      Image {
+        source: row.match.awayTeamLogo || ""
+        visible: source !== ""
+        asynchronous: true
+        fillMode: Image.PreserveAspectFit
+        Layout.preferredWidth: Style.space(18)
+        Layout.preferredHeight: Style.space(18)
+      }
+
       Text {
         Layout.fillWidth: true
         text: row.match.awayTeamName
@@ -197,6 +206,15 @@ Item {
         horizontalAlignment: Text.AlignRight
         font.family: row.fontFamily
         font.pixelSize: Style.font.body
+      }
+
+      Image {
+        source: row.match.homeTeamLogo || ""
+        visible: source !== ""
+        asynchronous: true
+        fillMode: Image.PreserveAspectFit
+        Layout.preferredWidth: Style.space(18)
+        Layout.preferredHeight: Style.space(18)
       }
 
       Text {

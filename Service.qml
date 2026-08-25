@@ -32,10 +32,12 @@ Item {
   }
 
   readonly property int refreshIntervalSec: intSetting("refreshIntervalSec", 20, 10, 120)
+  readonly property int liveRefreshIntervalSec: intSetting("liveRefreshIntervalSec", 5, 3, 30)
   readonly property int scheduleRefreshIntervalMin: intSetting("scheduleRefreshIntervalMin", 5, 1, 60)
   readonly property bool compactBarLabel: setting("compactBarLabel", true) === true
   readonly property string language: String(setting("language", "en"))
   readonly property string footballName: String(setting("footballName", "soccer"))
+  readonly property string heroWidget: String(setting("heroWidget", "trophy"))
 
   // ---------------------------------------------------------------- persisted state
   //
@@ -234,6 +236,24 @@ Item {
     return out
   }
 
+  // Earliest not-yet-started followed match still to come today, or null.
+  // Scoped to today on purpose: `liveMatchesByLeague` only ever holds
+  // today's scoreboard (see refreshScoreboards()), so this is free — no
+  // extra ESPN call for a multi-day lookahead.
+  function nextFollowedMatchToday() {
+    var best = null
+    for (var i = 0; i < followedLeagues.length; i++) {
+      var slug = followedLeagues[i]
+      var matches = liveMatchesByLeague[slug] || []
+      for (var j = 0; j < matches.length; j++) {
+        var m = matches[j]
+        if (!Model.isUpcoming(m) || m.kind === "leaderboard" || !isEventFollowed(m, slug)) continue
+        if (!best || new Date(m.startDate).getTime() < new Date(best.startDate).getTime()) best = m
+      }
+    }
+    return best
+  }
+
   function ensureTeams(slug) {
     if (teamsByLeague[slug] !== undefined) return
     var next = {}
@@ -256,23 +276,22 @@ Item {
   }
 
   // -------------------------------------------------------- scoreboard polling
-
-  property var _scoreboardQueue: []
-  property bool _scoreboardBusy: false
+  //
+  // One short-lived curl Process per followed league, fired in parallel on
+  // every refresh (followed-league counts are small in practice), instead
+  // of the old shared single-Process sequential queue. That queue added a
+  // "wait your turn" delay on top of the poll interval for any league past
+  // the first — this removes it, which matters for how fast a goal
+  // notification actually lands.
 
   function refreshScoreboards() {
     if (followedLeagues.length === 0) { liveMatchesByLeague = {}; return }
-    _scoreboardQueue = followedLeagues.slice()
-    _pumpScoreboardQueue()
+    for (var i = 0; i < followedLeagues.length; i++) _fetchScoreboard(followedLeagues[i])
   }
 
-  function _pumpScoreboardQueue() {
-    if (_scoreboardBusy || _scoreboardQueue.length === 0) return
-    var slug = _scoreboardQueue.shift()
-    _scoreboardBusy = true
-    scoreboardProcess.currentSlug = slug
-    scoreboardProcess.command = ["curl", "-s", "--max-time", "8", Api.scoreboardUrl(slug, Model.todayStamp())]
-    scoreboardProcess.running = true
+  function _fetchScoreboard(slug) {
+    var worker = scoreboardWorkerComponent.createObject(root, { slug: slug })
+    if (worker) worker.start()
   }
 
   function _applyScoreboard(slug, raw) {
@@ -284,16 +303,21 @@ Item {
     _detectEvents(slug, matches)
   }
 
-  Process {
-    id: scoreboardProcess
-    property string currentSlug: ""
-    running: false
-    command: []
-    stdout: StdioCollector { id: scoreboardOut; waitForEnd: true }
-    onExited: function(exitCode) {
-      root._scoreboardBusy = false
-      if (exitCode === 0) root._applyScoreboard(scoreboardProcess.currentSlug, scoreboardOut.text)
-      root._pumpScoreboardQueue()
+  Component {
+    id: scoreboardWorkerComponent
+    Process {
+      id: scoreboardWorker
+      property string slug: ""
+      command: []
+      stdout: StdioCollector { id: scoreboardOut; waitForEnd: true }
+      function start() {
+        scoreboardWorker.command = ["curl", "-s", "--max-time", "8", Api.scoreboardUrl(scoreboardWorker.slug, Model.todayStamp())]
+        scoreboardWorker.running = true
+      }
+      onExited: function(exitCode) {
+        if (exitCode === 0) root._applyScoreboard(scoreboardWorker.slug, scoreboardOut.text)
+        scoreboardWorker.destroy()
+      }
     }
   }
 
@@ -416,8 +440,14 @@ Item {
     // actually follows. This is the "direct" tab's data source, and it
     // already includes today's not-yet-started matches, so it covers the
     // "upcoming" section too.
+    //
+    // Interval is adaptive: falls back to the slower, ESPN-friendly
+    // refreshIntervalSec while nothing followed is live, but switches to
+    // the short liveRefreshIntervalSec the moment a followed match is in
+    // progress, so a goal shows up (and notifies) within a few seconds
+    // instead of waiting out the idle interval.
     id: fastTimer
-    interval: root.refreshIntervalSec * 1000
+    interval: (root.allLiveFollowedMatches.length > 0 ? root.liveRefreshIntervalSec : root.refreshIntervalSec) * 1000
     repeat: true
     running: root.stateLoaded
     triggeredOnStart: true

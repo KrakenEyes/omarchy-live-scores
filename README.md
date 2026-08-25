@@ -7,25 +7,32 @@ competitions — with a bar indicator and customizable notifications.
 
 ## Features
 
-- **Live** — live matches plus today's not-yet-started ones, grouped by
-  followed league.
-- **Standings** — pick any followed league, see its table.
-- **Leagues & Teams** — follow leagues from a curated catalogue (grouped by
-  sport), narrow a league down to specific teams, or add any ESPN league
-  slug the catalogue doesn't cover.
-- **Notifications** — master on/off plus per-category toggles (goals, key
-  moments, score changes, kickoff/final whistle), scoped to followed teams
-  only or any followed league.
-- **Olympics** — no fixed league list (ESPN doesn't have one that stays
-  valid across editions): add whichever Olympic event slug is live for the
-  current Games, then filter by country across every Olympic event you've
-  added at once.
-- English, French, and Spanish UI, plus a separate "Soccer vs Football"
-  naming preference (it's a regional split, not a translation).
-- Bar pill with the score of the most relevant live match, click to open
-  the panel.
-- Every icon is a theme-colored glyph, not an emoji — the whole UI follows
-  the active Omarchy theme, light or dark.
+- **Live scores** — every live match, plus today's kickoffs still to come,
+  organized by the leagues you follow. Team crests included.
+- **Standings** — jump into any followed league's table at a glance.
+- **Follow what you care about** — pick leagues from a built-in catalogue
+  (organized by sport), narrow down to specific teams, or add any ESPN
+  league not in the catalogue yourself.
+- **Fast during the action** — polling automatically speeds up the moment
+  a followed match goes live, so goals and score changes (and their
+  notification) show up in seconds, not tens of seconds — then eases back
+  off once nothing's live, to stay light on ESPN.
+- **Notifications that stay out of your way** — turn them on or off per
+  category (goals, key moments, score changes, kickoff/final whistle), and
+  scope them to just your followed teams or a whole league.
+- **Olympics tracking** — follow any live Olympic event and filter results
+  by country, across every sport you've added, for the current Games.
+- **Bar widget** — the score of your most relevant live match, right in
+  the bar; click to open the full panel.
+- **Choose your panel header** — the classic trophy icon, or a compact
+  score/countdown widget (next followed kickoff today, or the live score)
+  that expands into a fuller match card with one click.
+- **Multilingual** — English, French, and Spanish, with a separate
+  "Soccer" vs "Football" naming option since that's regional, not a
+  translation.
+- **Matches the rest of your desktop** — every sport icon follows your
+  active Omarchy theme, light or dark, no emoji (team crests are the one
+  exception — those are ESPN's real logos, shown as-is).
 
 ## Install
 
@@ -95,9 +102,9 @@ This plugin runs unsandboxed inside `omarchy-shell`, like every Omarchy
 plugin, once enabled. What it actually does:
 
 - **Network**: read-only HTTPS GET requests to `site.api.espn.com`
-  (scores, standings, team lists) via `curl` subprocesses — one per
-  followed league, only while the plugin is enabled. No credentials, no
-  writes.
+  (scores, standings, team lists, team crests) via `curl` subprocesses —
+  one per followed league, fired in parallel, only while the plugin is
+  enabled. No credentials, no writes.
 - **Commands executed**: `curl` (ESPN requests) and, for notifications,
   `omarchy-notification-send` with a `notify-send` fallback if that binary
   isn't present.
@@ -105,7 +112,8 @@ plugin, once enabled. What it actually does:
   plugin's directory (followed leagues/teams/countries, notification
   preferences). Nothing outside the plugin's own folder is touched.
 - **Background behavior**: two polling timers while enabled — one for live
-  matches (configurable, default 20s, only for leagues with a match today),
+  matches (configurable idle rate, default 20s, automatically dropping to
+  a faster configurable rate, default 5s, while a followed match is live),
   one for standings (configurable, default 5min).
 - **No required external configuration** — everything is set from the
   panel.

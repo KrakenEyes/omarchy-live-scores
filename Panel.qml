@@ -30,6 +30,7 @@ Panel {
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
   readonly property string language: scores ? scores.language : "en"
   readonly property string footballName: scores ? scores.footballName : "soccer"
+  readonly property string heroWidget: scores ? scores.heroWidget : "trophy"
 
   readonly property var tabs: [
     { id: "live", label: Strings.t(root.language, "tabLive") },
@@ -38,6 +39,29 @@ Panel {
     { id: "notifications", label: Strings.t(root.language, "tabNotifications") }
   ]
   property string currentTab: "live"
+
+  // Hero icon components, picked by the `heroWidget` setting (default
+  // "trophy" keeps today's static icon; "scoreboard" swaps in the
+  // click-to-expand score/countdown widget — see HeroMatchWidget.qml).
+  Component {
+    id: heroTrophyComponent
+    Text {
+      text: Model.GLYPH_TROPHY
+      color: root.foreground
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.display
+    }
+  }
+
+  Component {
+    id: heroMatchWidgetComponent
+    HeroMatchWidget {
+      service: root.scores
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+      language: root.language
+    }
+  }
 
   function open() {
     root.controller.show()
@@ -96,14 +120,7 @@ Panel {
           title: Strings.t(root.language, "heroTitle")
           foreground: root.foreground
           fontFamily: root.fontFamily
-          iconComponent: Component {
-            Text {
-              text: Model.GLYPH_TROPHY
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.display
-            }
-          }
+          iconComponent: root.heroWidget === "scoreboard" ? heroMatchWidgetComponent : heroTrophyComponent
         }
 
         // Flow (not Row) so a tab label that doesn't fit wraps to the next
