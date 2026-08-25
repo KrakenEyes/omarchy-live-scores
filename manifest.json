@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "id": "krakeneyes.live-scores",
+  "name": "Live Scores",
+  "version": "1.0.0",
+  "author": "KrakenEyes",
+  "license": "MIT",
+  "description": "Live scores, today's schedule and standings for soccer, hockey, basketball, football, baseball, golf, motorsport and combat sports — men's, women's and international competitions — with customizable notifications.",
+  "kinds": ["service", "bar-widget", "panel"],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Live Scores",
+    "description": "Live scores for your followed leagues and teams, with today's schedule and standings.",
+    "category": "Info",
+    "aliases": [
+      "scores",
+      "live-scores",
+      "sport",
+      "sports",
+      "soccer",
+      "football",
+      "hockey",
+      "basketball"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 20,
+      "scheduleRefreshIntervalMin": 5,
+      "compactBarLabel": true,
+      "language": "en",
+      "footballName": "soccer"
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Live match refresh (seconds)",
+        "description": "How often ESPN is polled for followed leagues with a match today.",
+        "min": 10,
+        "max": 120,
+        "step": 5,
+        "defaultValue": 20
+      },
+      {
+        "key": "scheduleRefreshIntervalMin",
+        "type": "integer",
+        "label": "Standings refresh (minutes)",
+        "min": 1,
+        "max": 60,
+        "step": 1,
+        "defaultValue": 5
+      },
+      {
+        "key": "compactBarLabel",
+        "type": "boolean",
+        "label": "Show score in the bar",
+        "description": "Shows the score of the most relevant followed live match next to the icon.",
+        "defaultValue": true
+      },
+      {
+        "key": "language",
+        "type": "enum",
+        "label": "Language",
+        "options": [
+          { "value": "en", "label": "English" },
+          { "value": "fr", "label": "Français" },
+          { "value": "es", "label": "Español" }
+        ],
+        "defaultValue": "en"
+      },
+      {
+        "key": "footballName",
+        "type": "enum",
+        "label": "Name for soccer/football",
+        "description": "\"Soccer\" vs \"Football\" is a regional naming split, not a translation — pick which one this plugin uses.",
+        "options": [
+          { "value": "soccer", "label": "Soccer" },
+          { "value": "football", "label": "Football" },
+          { "value": "european_football", "label": "European Football" }
+        ],
+        "defaultValue": "soccer"
+      }
+    ]
+  }
+}
