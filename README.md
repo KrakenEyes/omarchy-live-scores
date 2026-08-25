@@ -1,38 +1,25 @@
 # Live Scores
 
-An [Omarchy](https://omarchy.org) plugin: live scores, today's schedule, and
-standings for soccer, hockey, basketball, American football, baseball, golf,
-motorsport, and combat sports — men's, women's, and international
-competitions — with a bar indicator and customizable notifications.
+An [Omarchy](https://omarchy.org) plugin for live scores, schedules, and standings. Covers
+soccer, hockey, basketball, football, baseball, golf, motorsport, and combat sports. Includes
+a bar indicator and notifications.
 
 ## Features
 
-- **Live scores** — every live match, plus today's kickoffs still to come,
-  organized by the leagues you follow. Team crests included.
-- **Standings** — jump into any followed league's table at a glance.
-- **Follow what you care about** — pick leagues from a built-in catalogue
-  (organized by sport), narrow down to specific teams, or add any ESPN
-  league not in the catalogue yourself.
-- **Fast during the action** — polling automatically speeds up the moment
-  a followed match goes live, so goals and score changes (and their
-  notification) show up in seconds, not tens of seconds — then eases back
-  off once nothing's live, to stay light on ESPN.
-- **Notifications that stay out of your way** — turn them on or off per
-  category (goals, key moments, score changes, kickoff/final whistle), and
-  scope them to just your followed teams or a whole league.
-- **Olympics tracking** — follow any live Olympic event and filter results
-  by country, across every sport you've added, for the current Games.
-- **Bar widget** — the score of your most relevant live match, right in
-  the bar; click to open the full panel.
-- **Choose your panel header** — the classic trophy icon, or a compact
-  score/countdown widget (next followed kickoff today, or the live score)
-  that expands into a fuller match card with one click.
-- **Multilingual** — English, French, and Spanish, with a separate
-  "Soccer" vs "Football" naming option since that's regional, not a
-  translation.
-- **Matches the rest of your desktop** — every sport icon follows your
-  active Omarchy theme, light or dark, no emoji (team crests are the one
-  exception — those are ESPN's real logos, shown as-is).
+- **Live scores**: live matches and today's kickoffs, grouped by league. Team crests included.
+- **Standings**: the table for any league you follow.
+- **Follow what you care about**: pick leagues from the built-in list, narrow down to specific
+  teams, or add any ESPN league yourself.
+- **Fast when it matters**: checks scores more often during live matches, so goals and score
+  changes show up fast. Slows back down once nothing's live.
+- **Notifications**: turn on goals, key moments, score changes, and kickoff/final whistle. Set
+  them per team or per league.
+- **Olympics tracking**: follow live Olympic events and filter by country.
+- **Bar widget**: your most relevant live match, right in the bar. Click to open the full panel.
+- **Panel header**: choose the trophy icon or a compact score/countdown widget.
+- **Multilingual**: English, French, and Spanish. Option to use "Football" instead of "Soccer".
+- **Matches your theme**: icons follow your Omarchy theme, light or dark. Team crests are real
+  logos.
 
 ## Install
 

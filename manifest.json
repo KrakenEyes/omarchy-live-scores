@@ -5,7 +5,7 @@
   "version": "1.1.0",
   "author": "KrakenEyes",
   "license": "MIT",
-  "description": "Live scores, today's schedule and standings for soccer, hockey, basketball, football, baseball, golf, motorsport and combat sports — men's, women's and international competitions — with customizable notifications.",
+  "description": "Live scores, schedules, and standings for soccer, hockey, basketball, football, baseball, golf, motorsport, and combat sports, with notifications.",
   "kinds": ["service", "bar-widget", "panel"],
   "entryPoints": {
     "service": "Service.qml",
