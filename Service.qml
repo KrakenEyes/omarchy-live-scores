@@ -224,6 +224,15 @@ Item {
   property var standingsByLeague: ({})     // slug -> [{ groupName, rows }]
   property var teamsByLeague: ({})         // slug -> [{ id, name, abbr }]
 
+  // Hard ceiling on any single ESPN response. curl aborts the transfer
+  // itself (exit code 63, CURLE_FILESIZE_EXCEEDED) once the body exceeds
+  // this, even without a Content-Length header — curl tracks bytes actually
+  // received. This is the real point of enforcement: it caps what
+  // StdioCollector can ever retain, before any QML code sees the body. The
+  // onExited handlers below re-check the collected length independently,
+  // in case the local curl build doesn't honor --max-filesize.
+  readonly property int maxResponseBytes: 5 * 1024 * 1024 // 5 MiB
+
   readonly property var allLiveFollowedMatches: {
     var out = []
     for (var i = 0; i < followedLeagues.length; i++) {
@@ -311,11 +320,15 @@ Item {
       command: []
       stdout: StdioCollector { id: scoreboardOut; waitForEnd: true }
       function start() {
-        scoreboardWorker.command = ["curl", "-s", "--max-time", "8", Api.scoreboardUrl(scoreboardWorker.slug, Model.todayStamp())]
+        scoreboardWorker.command = ["curl", "-s", "--max-time", "8",
+          "--max-filesize", String(root.maxResponseBytes),
+          Api.scoreboardUrl(scoreboardWorker.slug, Model.todayStamp())]
         scoreboardWorker.running = true
       }
       onExited: function(exitCode) {
-        if (exitCode === 0) root._applyScoreboard(scoreboardWorker.slug, scoreboardOut.text)
+        if (exitCode === 0 && scoreboardOut.text.length <= root.maxResponseBytes) {
+          root._applyScoreboard(scoreboardWorker.slug, scoreboardOut.text)
+        }
         scoreboardWorker.destroy()
       }
     }
@@ -331,7 +344,8 @@ Item {
     var slug = _standingsQueue.shift()
     _standingsBusy = true
     standingsProcess.currentSlug = slug
-    standingsProcess.command = ["curl", "-s", "--max-time", "8", Api.standingsUrl(slug)]
+    standingsProcess.command = ["curl", "-s", "--max-time", "8",
+      "--max-filesize", String(root.maxResponseBytes), Api.standingsUrl(slug)]
     standingsProcess.running = true
   }
 
@@ -343,7 +357,7 @@ Item {
     stdout: StdioCollector { id: standingsOut; waitForEnd: true }
     onExited: function(exitCode) {
       root._standingsBusy = false
-      if (exitCode === 0) {
+      if (exitCode === 0 && standingsOut.text.length <= root.maxResponseBytes) {
         var groups = Api.parseStandings(standingsOut.text)
         var next = {}
         for (var k in root.standingsByLeague) next[k] = root.standingsByLeague[k]
@@ -364,7 +378,8 @@ Item {
     var slug = _teamsQueue.shift()
     _teamsBusy = true
     teamsProcess.currentSlug = slug
-    teamsProcess.command = ["curl", "-s", "--max-time", "8", Api.teamsUrl(slug)]
+    teamsProcess.command = ["curl", "-s", "--max-time", "8",
+      "--max-filesize", String(root.maxResponseBytes), Api.teamsUrl(slug)]
     teamsProcess.running = true
   }
 
@@ -376,7 +391,7 @@ Item {
     stdout: StdioCollector { id: teamsOut; waitForEnd: true }
     onExited: function(exitCode) {
       root._teamsBusy = false
-      if (exitCode === 0) {
+      if (exitCode === 0 && teamsOut.text.length <= root.maxResponseBytes) {
         var teams = Api.parseTeams(teamsOut.text)
         var next = {}
         for (var k in root.teamsByLeague) next[k] = root.teamsByLeague[k]

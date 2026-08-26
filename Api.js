@@ -7,6 +7,22 @@
 var BASE_SITE = "https://site.api.espn.com/apis/site/v2/sports/"
 var BASE_CORE = "https://site.api.espn.com/apis/v2/sports/"
 
+// Defensive ceilings on untrusted ESPN payloads — independent of the
+// byte-size cap enforced in Service.qml before this file ever sees the
+// body, in case a payload is small but pathological (a huge array of tiny
+// objects, or one absurdly long string field).
+var MAX_EVENTS = 500          // scoreboard events / leaderboard rows per league per fetch
+var MAX_TEAMS = 500           // teams endpoint
+var MAX_GROUPS = 50           // standings conference/division groups
+var MAX_ROWS_PER_GROUP = 100  // standings rows per group
+var MAX_STR_LEN = 300         // names, status text, ids, etc.
+var MAX_URL_LEN = 500         // logo URLs
+
+function capStr(value, maxLen) {
+  var s = String(value || "")
+  return s.length > maxLen ? s.slice(0, maxLen) : s
+}
+
 function scoreboardUrl(slug, dateStr) {
   var url = BASE_SITE + slug + "/scoreboard"
   if (dateStr) url += "?dates=" + dateStr
@@ -57,23 +73,23 @@ function parseMatch(event, leagueSlug) {
 
   return {
     kind: "match",
-    id: String(event.id || competition.id || ""),
+    id: capStr(event.id || competition.id || "", MAX_STR_LEN),
     leagueSlug: leagueSlug,
-    startDate: String(event.date || competition.date || ""),
+    startDate: capStr(event.date || competition.date || "", MAX_STR_LEN),
     state: String(statusType.state || "pre"), // "pre" | "in" | "post"
     completed: statusType.completed === true,
-    statusDetail: String(statusType.shortDetail || statusType.detail || statusType.description || ""),
-    homeTeamId: String(homeTeam.id || ""),
-    homeTeamName: String(homeTeam.shortDisplayName || homeTeam.displayName || homeTeam.name || ""),
-    homeTeamAbbr: String(homeTeam.abbreviation || ""),
-    homeTeamLogo: String((homeTeam.logos && homeTeam.logos[0] && homeTeam.logos[0].href) || homeTeam.logo || ""),
-    homeScore: home.score !== undefined && home.score !== null ? String(home.score) : "",
-    awayTeamId: String(awayTeam.id || ""),
-    awayTeamName: String(awayTeam.shortDisplayName || awayTeam.displayName || awayTeam.name || ""),
-    awayTeamAbbr: String(awayTeam.abbreviation || ""),
-    awayTeamLogo: String((awayTeam.logos && awayTeam.logos[0] && awayTeam.logos[0].href) || awayTeam.logo || ""),
-    awayScore: away.score !== undefined && away.score !== null ? String(away.score) : "",
-    lastPlay: String((situation.lastPlay && situation.lastPlay.text) || situation.downDistanceText || "")
+    statusDetail: capStr(statusType.shortDetail || statusType.detail || statusType.description || "", MAX_STR_LEN),
+    homeTeamId: capStr(homeTeam.id || "", MAX_STR_LEN),
+    homeTeamName: capStr(homeTeam.shortDisplayName || homeTeam.displayName || homeTeam.name || "", MAX_STR_LEN),
+    homeTeamAbbr: capStr(homeTeam.abbreviation || "", MAX_STR_LEN),
+    homeTeamLogo: capStr((homeTeam.logos && homeTeam.logos[0] && homeTeam.logos[0].href) || homeTeam.logo || "", MAX_URL_LEN),
+    homeScore: home.score !== undefined && home.score !== null ? capStr(home.score, MAX_STR_LEN) : "",
+    awayTeamId: capStr(awayTeam.id || "", MAX_STR_LEN),
+    awayTeamName: capStr(awayTeam.shortDisplayName || awayTeam.displayName || awayTeam.name || "", MAX_STR_LEN),
+    awayTeamAbbr: capStr(awayTeam.abbreviation || "", MAX_STR_LEN),
+    awayTeamLogo: capStr((awayTeam.logos && awayTeam.logos[0] && awayTeam.logos[0].href) || awayTeam.logo || "", MAX_URL_LEN),
+    awayScore: away.score !== undefined && away.score !== null ? capStr(away.score, MAX_STR_LEN) : "",
+    lastPlay: capStr((situation.lastPlay && situation.lastPlay.text) || situation.downDistanceText || "", MAX_STR_LEN)
   }
 }
 
@@ -88,14 +104,14 @@ function parseLeaderboardEvent(event, leagueSlug) {
     || (event.status && event.status.type) || {}
   var competitors = competition.competitors || []
   var rows = []
-  for (var i = 0; i < competitors.length; i++) {
+  for (var i = 0; i < competitors.length && rows.length < MAX_EVENTS; i++) {
     var c = competitors[i]
     var athlete = c.athlete || {}
-    var record = (c.records && c.records[0] && c.records[0].summary) ? String(c.records[0].summary) : ""
+    var record = (c.records && c.records[0] && c.records[0].summary) ? capStr(c.records[0].summary, MAX_STR_LEN) : ""
     rows.push({
-      id: String(c.id || i),
-      name: String(athlete.shortName || athlete.displayName || athlete.fullName || ""),
-      score: c.score !== undefined && c.score !== null ? String(c.score) : "",
+      id: capStr(c.id || i, MAX_STR_LEN),
+      name: capStr(athlete.shortName || athlete.displayName || athlete.fullName || "", MAX_STR_LEN),
+      score: c.score !== undefined && c.score !== null ? capStr(c.score, MAX_STR_LEN) : "",
       winner: c.winner === true,
       record: record
     })
@@ -103,13 +119,13 @@ function parseLeaderboardEvent(event, leagueSlug) {
 
   return {
     kind: "leaderboard",
-    id: String(event.id || competition.id || ""),
+    id: capStr(event.id || competition.id || "", MAX_STR_LEN),
     leagueSlug: leagueSlug,
-    name: String(event.shortName || event.name || ""),
-    startDate: String(event.date || competition.date || ""),
+    name: capStr(event.shortName || event.name || "", MAX_STR_LEN),
+    startDate: capStr(event.date || competition.date || "", MAX_STR_LEN),
     state: String(statusType.state || "pre"),
     completed: statusType.completed === true,
-    statusDetail: String(statusType.shortDetail || statusType.detail || statusType.description || ""),
+    statusDetail: capStr(statusType.shortDetail || statusType.detail || statusType.description || "", MAX_STR_LEN),
     rows: rows
   }
 }
@@ -118,7 +134,7 @@ function parseScoreboard(raw, leagueSlug, kind) {
   var parsed = safeParse(raw)
   if (!parsed || !parsed.events) return []
   var out = []
-  for (var i = 0; i < parsed.events.length; i++) {
+  for (var i = 0; i < parsed.events.length && out.length < MAX_EVENTS; i++) {
     var item = kind === "leaderboard"
       ? parseLeaderboardEvent(parsed.events[i], leagueSlug)
       : parseMatch(parsed.events[i], leagueSlug)
@@ -132,17 +148,17 @@ function parseTeams(raw) {
   if (!parsed) return []
   var out = []
   var sports = parsed.sports || []
-  for (var i = 0; i < sports.length; i++) {
+  for (var i = 0; i < sports.length && out.length < MAX_TEAMS; i++) {
     var leagues = sports[i].leagues || []
-    for (var j = 0; j < leagues.length; j++) {
+    for (var j = 0; j < leagues.length && out.length < MAX_TEAMS; j++) {
       var teams = leagues[j].teams || []
-      for (var k = 0; k < teams.length; k++) {
+      for (var k = 0; k < teams.length && out.length < MAX_TEAMS; k++) {
         var t = teams[k].team || {}
         if (!t.id) continue
         out.push({
-          id: String(t.id),
-          name: String(t.shortDisplayName || t.displayName || t.name || ""),
-          abbr: String(t.abbreviation || "")
+          id: capStr(t.id, MAX_STR_LEN),
+          name: capStr(t.shortDisplayName || t.displayName || t.name || "", MAX_STR_LEN),
+          abbr: capStr(t.abbreviation || "", MAX_STR_LEN)
         })
       }
     }
@@ -164,11 +180,11 @@ function parseStandings(raw) {
     : (parsed.standings ? [{ name: "", standings: parsed.standings }] : [])
 
   var out = []
-  for (var i = 0; i < groups.length; i++) {
+  for (var i = 0; i < groups.length && out.length < MAX_GROUPS; i++) {
     var group = groups[i]
     var entries = (group.standings && group.standings.entries) || []
     var rows = []
-    for (var j = 0; j < entries.length; j++) {
+    for (var j = 0; j < entries.length && rows.length < MAX_ROWS_PER_GROUP; j++) {
       var entry = entries[j]
       var team = entry.team || entry.athlete || {}
       var stats = entry.stats || []
@@ -180,16 +196,16 @@ function parseStandings(raw) {
         : (byName.winPercent ? byName.winPercent.displayValue : ""))
 
       rows.push({
-        teamId: String(team.id || ""),
-        teamName: String(team.shortDisplayName || team.displayName || team.fullName || team.name || ""),
-        wins: byName.wins ? String(byName.wins.displayValue) : "-",
-        losses: byName.losses ? String(byName.losses.displayValue) : "-",
-        ties: byName.ties ? String(byName.ties.displayValue) : "",
-        points: String(points || ""),
-        rank: byName.rank ? String(byName.rank.displayValue) : String(j + 1)
+        teamId: capStr(team.id || "", MAX_STR_LEN),
+        teamName: capStr(team.shortDisplayName || team.displayName || team.fullName || team.name || "", MAX_STR_LEN),
+        wins: byName.wins ? capStr(byName.wins.displayValue, MAX_STR_LEN) : "-",
+        losses: byName.losses ? capStr(byName.losses.displayValue, MAX_STR_LEN) : "-",
+        ties: byName.ties ? capStr(byName.ties.displayValue, MAX_STR_LEN) : "",
+        points: capStr(points || "", MAX_STR_LEN),
+        rank: byName.rank ? capStr(byName.rank.displayValue, MAX_STR_LEN) : String(j + 1)
       })
     }
-    out.push({ groupName: String(group.name || ""), rows: rows })
+    out.push({ groupName: capStr(group.name || "", MAX_STR_LEN), rows: rows })
   }
   return out
 }
