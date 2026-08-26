@@ -46,6 +46,7 @@ Panel {
   Component {
     id: heroTrophyComponent
     Text {
+      textFormat: Text.PlainText
       text: Model.GLYPH_TROPHY
       color: root.foreground
       font.family: root.fontFamily

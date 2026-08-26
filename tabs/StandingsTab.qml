@@ -52,6 +52,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: root.leagueOptions.length === 0
       width: parent.width
       text: Strings.t(root.language, "noFollowed")
@@ -75,6 +76,7 @@ Item {
         spacing: Style.space(10)
 
         Text {
+          textFormat: Text.PlainText
           visible: root.selectedLeague !== "" && root.groups.length === 0
           width: parent.width
           text: Strings.t(root.language, "noStandings")
@@ -106,6 +108,7 @@ Item {
                 spacing: Style.space(8)
 
                 Text {
+                  textFormat: Text.PlainText
                   text: standingsRow.modelData.rank
                   color: Qt.darker(root.foreground, 1.3)
                   font.family: root.fontFamily
@@ -113,6 +116,7 @@ Item {
                   Layout.preferredWidth: Style.space(22)
                 }
                 Text {
+                  textFormat: Text.PlainText
                   Layout.fillWidth: true
                   text: standingsRow.modelData.teamName
                   color: root.foreground
@@ -121,6 +125,7 @@ Item {
                   font.pixelSize: Style.font.body
                 }
                 Text {
+                  textFormat: Text.PlainText
                   text: standingsRow.modelData.wins + "-" + standingsRow.modelData.losses
                     + (standingsRow.modelData.ties !== "" ? "-" + standingsRow.modelData.ties : "")
                   color: Qt.darker(root.foreground, 1.2)
@@ -129,6 +134,7 @@ Item {
                   Layout.preferredWidth: Style.space(64)
                 }
                 Text {
+                  textFormat: Text.PlainText
                   text: standingsRow.modelData.points
                   color: root.foreground
                   font.bold: true

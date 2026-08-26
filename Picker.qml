@@ -62,6 +62,7 @@ Item {
     spacing: Style.spacing.labelGap
 
     Text {
+      textFormat: Text.PlainText
       visible: root.showLabel && root.label !== ""
       text: root.label
       color: Qt.darker(root.foreground, 1.4)
@@ -81,6 +82,7 @@ Item {
       HoverHandler { id: triggerHover }
 
       Text {
+        textFormat: Text.PlainText
         anchors.left: parent.left
         anchors.right: chevron.left
         anchors.verticalCenter: parent.verticalCenter
@@ -94,6 +96,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         id: chevron
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
@@ -165,6 +168,7 @@ Item {
         color: hover.hovered ? Style.hoverFillFor(root.foreground, root.accent) : "transparent"
 
         Text {
+          textFormat: Text.PlainText
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter

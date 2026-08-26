@@ -64,6 +64,7 @@ Item {
     spacing: Style.space(2)
 
     Text {
+      textFormat: Text.PlainText
       visible: !root.hasContent
       text: Model.GLYPH_TROPHY
       color: root.foreground
@@ -76,6 +77,7 @@ Item {
       spacing: Style.space(6)
 
       Text {
+        textFormat: Text.PlainText
         text: root.liveMatch ? Model.glyphForSlug(root.liveMatch.leagueSlug) : Model.GLYPH_TROPHY
         color: root.liveMatch ? Color.urgent : root.foreground
         font.family: root.fontFamily
@@ -83,6 +85,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         text: root.liveMatch ? Model.matchLabel(root.liveMatch) : root.countdownText()
         color: root.foreground
         font.bold: true
@@ -96,6 +99,7 @@ Item {
       spacing: Style.space(4)
 
       Text {
+        textFormat: Text.PlainText
         width: Style.space(220)
         wrapMode: Text.WordWrap
         text: root.liveMatch
@@ -108,6 +112,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         text: root.liveMatch ? root.liveMatch.statusDetail : root.countdownText()
         color: Qt.darker(root.foreground, 1.3)
         font.family: root.fontFamily

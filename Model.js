@@ -109,7 +109,10 @@ function matchIsFollowedByCountry(match, followedCountryAbbrs) {
 }
 
 function groupByLeague(matches, leagueLabelFn) {
-  var byLeague = ({})
+  // Object.create(null): keyed directly by leagueSlug below, which could in
+  // principle be "__proto__" (custom/Olympic slugs are user-typed, only
+  // allowlisted at the point of entry in Service.qml, not re-checked here).
+  var byLeague = Object.create(null)
   var order = []
   for (var i = 0; i < matches.length; i++) {
     var m = matches[i]

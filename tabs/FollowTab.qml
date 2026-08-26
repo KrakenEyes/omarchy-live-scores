@@ -65,6 +65,7 @@ Item {
           spacing: Style.space(4)
 
           Text {
+            textFormat: Text.PlainText
             text: root.sportGroupLabel(sportBlock.modelData.id)
             color: Qt.darker(root.foreground, 1.3)
             font.bold: true
@@ -127,6 +128,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: (root.service ? root.service.followedLeagues.length : 0) > 0
         width: column.width
         text: Strings.t(root.language, "followedTeams")
@@ -157,6 +159,7 @@ Item {
             spacing: Style.space(8)
 
             Text {
+              textFormat: Text.PlainText
               text: Sports.leagueLabel(teamBlock.modelData)
               color: Qt.darker(root.foreground, 1.2)
               font.bold: true
@@ -165,6 +168,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               text: "· " + Strings.t(root.language, "removeLeague")
               color: Color.urgent
               font.family: root.fontFamily
@@ -233,6 +237,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: olympicsBlock.width
           text: Strings.t(root.language, "olympicsHelp")
           color: Qt.darker(root.foreground, 1.5)
@@ -278,6 +283,7 @@ Item {
             Component.onCompleted: if (root.service) root.service.ensureTeams(olympicLeagueRow.modelData)
 
             Text {
+              textFormat: Text.PlainText
               text: Sports.leagueLabel(olympicLeagueRow.modelData)
               color: root.foreground
               font.family: root.fontFamily
@@ -285,6 +291,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               text: "· " + Strings.t(root.language, "removeLeague")
               color: Color.urgent
               font.family: root.fontFamily

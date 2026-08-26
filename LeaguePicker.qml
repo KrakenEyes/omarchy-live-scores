@@ -93,6 +93,7 @@ Item {
     spacing: Style.spacing.labelGap
 
     Text {
+      textFormat: Text.PlainText
       visible: root.showLabel && root.label !== ""
       text: root.label
       color: Qt.darker(root.foreground, 1.4)
@@ -112,6 +113,7 @@ Item {
       HoverHandler { id: triggerHover }
 
       Text {
+        textFormat: Text.PlainText
         anchors.left: parent.left
         anchors.right: chevron.left
         anchors.verticalCenter: parent.verticalCenter
@@ -125,6 +127,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         id: chevron
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
@@ -213,6 +216,7 @@ Item {
         height: popup.height - searchField.height - 1 - Style.space(16)
 
         Text {
+          textFormat: Text.PlainText
           anchors.centerIn: parent
           visible: listView.count === 0
           text: root.emptyText
@@ -255,6 +259,7 @@ Item {
                 borderSpec: Border.controlSpec(row.selected ? "selected" : "normal", root.foreground, root.accent)
 
                 Text {
+                  textFormat: Text.PlainText
                   anchors.centerIn: parent
                   visible: row.selected
                   text: "✓"
@@ -265,6 +270,7 @@ Item {
               }
 
               Text {
+                textFormat: Text.PlainText
                 width: parent.width - checkbox.width - parent.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.modelData.label

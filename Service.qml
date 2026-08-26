@@ -86,7 +86,7 @@ Item {
   // sports, Olympics has no curated league list, just this.
   function addOlympicLeague(slug) {
     var clean = String(slug || "").trim()
-    if (clean === "") return
+    if (!isValidSlug(clean)) return
     if (followedLeagues.indexOf(clean) === -1) followedLeagues = followedLeagues.concat([clean])
     if (olympicLeagues.indexOf(clean) === -1) olympicLeagues = olympicLeagues.concat([clean])
     refreshScoreboards()
@@ -114,9 +114,18 @@ Item {
     saveDebounce.restart()
   }
 
+  // ESPN slugs are always lowercase letters/digits/hyphens/slashes (e.g.
+  // "hockey/nhl"); this allowlist is defense-in-depth on top of the argv
+  // curl call already being injection-safe — it just keeps obviously junk
+  // input (whitespace, control chars, absurd length) out of the fetch URL
+  // and out of the persisted followed-leagues list.
+  function isValidSlug(slug) {
+    return slug.length > 0 && slug.length <= 100 && /^[A-Za-z0-9_\-\/]+$/.test(slug)
+  }
+
   function addCustomLeague(slug) {
     var clean = String(slug || "").trim()
-    if (clean === "" || followedLeagues.indexOf(clean) !== -1) return
+    if (!isValidSlug(clean) || followedLeagues.indexOf(clean) !== -1) return
     followedLeagues = followedLeagues.concat([clean])
     refreshScoreboards()
     saveDebounce.restart()
@@ -224,13 +233,21 @@ Item {
   property var standingsByLeague: ({})     // slug -> [{ groupName, rows }]
   property var teamsByLeague: ({})         // slug -> [{ id, name, abbr }]
 
-  // Hard ceiling on any single ESPN response. curl aborts the transfer
-  // itself (exit code 63, CURLE_FILESIZE_EXCEEDED) once the body exceeds
-  // this, even without a Content-Length header — curl tracks bytes actually
-  // received. This is the real point of enforcement: it caps what
-  // StdioCollector can ever retain, before any QML code sees the body. The
-  // onExited handlers below re-check the collected length independently,
-  // in case the local curl build doesn't honor --max-filesize.
+  // Hard ceiling on any single ESPN response, enforced twice:
+  //  1. curl's own --max-filesize (below, fast fail when Content-Length is
+  //     declared upfront — saves bandwidth on curl >= 8.4.0, a no-op on
+  //     older curl when the length isn't known ahead of time, e.g. chunked
+  //     responses — see curl's own man page note on this).
+  //  2. every curl invocation pipes into `head -c` (maxResponseBytes + 1),
+  //     which is the *real* enforcement point: head counts raw bytes as
+  //     they stream off the socket, with zero dependency on Content-Length,
+  //     chunked encoding, or curl version — it caps what StdioCollector can
+  //     ever retain, before any QML code sees the body. This plugin is
+  //     downloaded and run on machines with unknown curl versions, so (1)
+  //     alone isn't a safe assumption.
+  // The onExited handlers below re-check the collected length one more
+  // time (belt-and-suspenders): a body of exactly maxResponseBytes + 1 with
+  // no SIGPIPE involved would otherwise slip through as "exit 0".
   readonly property int maxResponseBytes: 5 * 1024 * 1024 // 5 MiB
 
   readonly property var allLiveFollowedMatches: {
@@ -320,8 +337,12 @@ Item {
       command: []
       stdout: StdioCollector { id: scoreboardOut; waitForEnd: true }
       function start() {
-        scoreboardWorker.command = ["curl", "-s", "--max-time", "8",
-          "--max-filesize", String(root.maxResponseBytes),
+        // URL and sizes are separate argv/positional-param elements, never
+        // interpolated into the shell script text — same injection safety
+        // as the old plain-argv curl call, even for an unvalidated slug.
+        scoreboardWorker.command = ["bash", "-c",
+          'set -o pipefail; curl -s --max-time 8 --max-filesize "$1" "$3" | head -c "$2"',
+          "_", String(root.maxResponseBytes), String(root.maxResponseBytes + 1),
           Api.scoreboardUrl(scoreboardWorker.slug, Model.todayStamp())]
         scoreboardWorker.running = true
       }
@@ -344,8 +365,10 @@ Item {
     var slug = _standingsQueue.shift()
     _standingsBusy = true
     standingsProcess.currentSlug = slug
-    standingsProcess.command = ["curl", "-s", "--max-time", "8",
-      "--max-filesize", String(root.maxResponseBytes), Api.standingsUrl(slug)]
+    standingsProcess.command = ["bash", "-c",
+      'set -o pipefail; curl -s --max-time 8 --max-filesize "$1" "$3" | head -c "$2"',
+      "_", String(root.maxResponseBytes), String(root.maxResponseBytes + 1),
+      Api.standingsUrl(slug)]
     standingsProcess.running = true
   }
 
@@ -378,8 +401,10 @@ Item {
     var slug = _teamsQueue.shift()
     _teamsBusy = true
     teamsProcess.currentSlug = slug
-    teamsProcess.command = ["curl", "-s", "--max-time", "8",
-      "--max-filesize", String(root.maxResponseBytes), Api.teamsUrl(slug)]
+    teamsProcess.command = ["bash", "-c",
+      'set -o pipefail; curl -s --max-time 8 --max-filesize "$1" "$3" | head -c "$2"',
+      "_", String(root.maxResponseBytes), String(root.maxResponseBytes + 1),
+      Api.teamsUrl(slug)]
     teamsProcess.running = true
   }
 

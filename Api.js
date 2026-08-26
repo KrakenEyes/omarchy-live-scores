@@ -23,6 +23,15 @@ function capStr(value, maxLen) {
   return s.length > maxLen ? s.slice(0, maxLen) : s
 }
 
+// Logo hrefs become an Image.source in the UI — reject anything that isn't
+// an https URL (file://, javascript:, or any other scheme) before it ever
+// reaches there, rather than trusting ESPN's JSON to only ever contain what
+// today's payloads happen to contain.
+function safeImageUrl(value) {
+  var s = capStr(value, MAX_URL_LEN)
+  return /^https:\/\//.test(s) ? s : ""
+}
+
 function scoreboardUrl(slug, dateStr) {
   var url = BASE_SITE + slug + "/scoreboard"
   if (dateStr) url += "?dates=" + dateStr
@@ -82,12 +91,12 @@ function parseMatch(event, leagueSlug) {
     homeTeamId: capStr(homeTeam.id || "", MAX_STR_LEN),
     homeTeamName: capStr(homeTeam.shortDisplayName || homeTeam.displayName || homeTeam.name || "", MAX_STR_LEN),
     homeTeamAbbr: capStr(homeTeam.abbreviation || "", MAX_STR_LEN),
-    homeTeamLogo: capStr((homeTeam.logos && homeTeam.logos[0] && homeTeam.logos[0].href) || homeTeam.logo || "", MAX_URL_LEN),
+    homeTeamLogo: safeImageUrl((homeTeam.logos && homeTeam.logos[0] && homeTeam.logos[0].href) || homeTeam.logo || ""),
     homeScore: home.score !== undefined && home.score !== null ? capStr(home.score, MAX_STR_LEN) : "",
     awayTeamId: capStr(awayTeam.id || "", MAX_STR_LEN),
     awayTeamName: capStr(awayTeam.shortDisplayName || awayTeam.displayName || awayTeam.name || "", MAX_STR_LEN),
     awayTeamAbbr: capStr(awayTeam.abbreviation || "", MAX_STR_LEN),
-    awayTeamLogo: capStr((awayTeam.logos && awayTeam.logos[0] && awayTeam.logos[0].href) || awayTeam.logo || "", MAX_URL_LEN),
+    awayTeamLogo: safeImageUrl((awayTeam.logos && awayTeam.logos[0] && awayTeam.logos[0].href) || awayTeam.logo || ""),
     awayScore: away.score !== undefined && away.score !== null ? capStr(away.score, MAX_STR_LEN) : "",
     lastPlay: capStr((situation.lastPlay && situation.lastPlay.text) || situation.downDistanceText || "", MAX_STR_LEN)
   }
@@ -188,7 +197,10 @@ function parseStandings(raw) {
       var entry = entries[j]
       var team = entry.team || entry.athlete || {}
       var stats = entry.stats || []
-      var byName = ({})
+      // Object.create(null) rather than {}: stats[s].name is genuine ESPN
+      // JSON content used directly as a key below — a stat named
+      // "__proto__" must not be able to touch this object's prototype.
+      var byName = Object.create(null)
       for (var s = 0; s < stats.length; s++) byName[stats[s].name] = stats[s]
 
       var points = byName.points ? byName.points.displayValue

@@ -44,6 +44,7 @@ Item {
       spacing: Style.space(14)
 
       Text {
+        textFormat: Text.PlainText
         visible: root.followedLeagues.length === 0
         width: parent.width
         text: Strings.t(root.language, "noFollowed")
@@ -87,6 +88,7 @@ Item {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: !leagueBlock.leaderboard && leagueBlock.liveMatches.length === 0
             width: leagueBlock.width
             text: Strings.t(root.language, "noLiveMatches")
@@ -96,6 +98,7 @@ Item {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: !leagueBlock.leaderboard && leagueBlock.upcomingMatches.length > 0
             width: leagueBlock.width
             text: Strings.t(root.language, "upcomingTitle")
@@ -131,6 +134,7 @@ Item {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: leagueBlock.leaderboard && leagueBlock.allEvents.length === 0
             width: leagueBlock.width
             text: Strings.t(root.language, "noLiveMatches")
@@ -163,6 +167,7 @@ Item {
       spacing: Style.space(8)
 
       Text {
+        textFormat: Text.PlainText
         text: row.live ? "●" : (row.finished ? "" : Model.shortTime(row.match.startDate))
         color: row.live ? Color.urgent : Qt.darker(row.foreground, 1.4)
         font.pixelSize: Style.font.caption
@@ -180,6 +185,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         text: row.match.awayTeamName
         color: row.foreground
@@ -189,6 +195,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         text: (row.finished || row.live) ? (row.match.awayScore + " - " + row.match.homeScore) : ""
         color: row.foreground
         font.bold: true
@@ -199,6 +206,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         text: row.match.homeTeamName
         color: row.foreground
@@ -218,6 +226,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         text: row.finished ? Strings.t(row.language, "finished") : (row.live ? row.match.statusDetail : "")
         color: Qt.darker(row.foreground, 1.4)
         font.pixelSize: Style.font.caption
@@ -249,6 +258,7 @@ Item {
       spacing: Style.space(8)
 
       Text {
+        textFormat: Text.PlainText
         text: card.live ? "●" : ""
         color: Color.urgent
         font.pixelSize: Style.font.caption
@@ -257,6 +267,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         text: card.event ? card.event.name : ""
         color: card.foreground
@@ -267,6 +278,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         text: card.finished ? Strings.t(card.language, "finished") : (card.event ? card.event.statusDetail : "")
         color: Qt.darker(card.foreground, 1.4)
         font.pixelSize: Style.font.caption
@@ -285,6 +297,7 @@ Item {
         spacing: Style.space(8)
 
         Text {
+          textFormat: Text.PlainText
           text: String(index + 1)
           color: Qt.darker(card.foreground, 1.3)
           font.family: card.fontFamily
@@ -293,6 +306,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           text: modelData.name
           color: modelData.winner ? card.foreground : Qt.darker(card.foreground, 1.1)
@@ -303,6 +317,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           text: modelData.score !== "" ? modelData.score : modelData.record
           color: Qt.darker(card.foreground, 1.2)
           font.family: card.fontFamily
