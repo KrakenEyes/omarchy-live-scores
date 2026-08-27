@@ -24,6 +24,11 @@ Item {
   readonly property color dim: Qt.darker(foreground, 1.5)
   readonly property var followedLeagues: service ? service.followedLeagues : []
 
+  // Natural height of this tab's content, unclamped by the viewport —
+  // Panel.qml reads this to size the tab area to whichever tab is active
+  // instead of a fixed height that leaves empty space under short tabs.
+  readonly property real contentHeight: column.implicitHeight
+
   // Delegates to the service's team/country filtering — Olympic leagues
   // filter by followed country across every Olympic sport at once,
   // ordinary leagues filter by followed team within that one league.

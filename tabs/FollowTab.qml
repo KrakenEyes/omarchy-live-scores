@@ -38,6 +38,11 @@ Item {
     return out
   }
 
+  // Natural height of this tab's content, unclamped by the viewport —
+  // Panel.qml reads this to size the tab area to whichever tab is active
+  // instead of a fixed height that leaves empty space under short tabs.
+  readonly property real contentHeight: column.implicitHeight
+
   Flickable {
     anchors.fill: parent
     contentWidth: width

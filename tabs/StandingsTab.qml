@@ -35,6 +35,19 @@ Item {
 
   readonly property var groups: (service && selectedLeague !== "") ? (service.standingsByLeague[selectedLeague] || []) : []
 
+  // Natural height of this tab's content, unclamped by the viewport —
+  // Panel.qml reads this to size the tab area to whichever tab is active
+  // instead of a fixed height that leaves empty space under short tabs.
+  // Built by hand (rather than an outer Column.implicitHeight) because the
+  // standings Flickable below has an explicit, viewport-derived height.
+  readonly property real contentHeight: {
+    var h = 0
+    if (leaguePicker.visible) h += leaguePicker.height + Style.space(12)
+    else h += noFollowedText.height + Style.space(12)
+    h += root.leagueOptions.length === 0 ? 0 : standingsColumn.implicitHeight
+    return h
+  }
+
   Column {
     anchors.fill: parent
     spacing: Style.space(12)
@@ -52,6 +65,7 @@ Item {
     }
 
     Text {
+      id: noFollowedText
       textFormat: Text.PlainText
       visible: root.leagueOptions.length === 0
       width: parent.width

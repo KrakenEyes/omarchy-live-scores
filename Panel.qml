@@ -149,11 +149,26 @@ Panel {
 
         PanelSeparator { foreground: root.foreground }
 
+        // Sized to whichever tab is active (its natural content height,
+        // floored/capped) instead of a fixed height — a short tab (e.g.
+        // Standings with one small league) no longer leaves empty space
+        // below it, and a tall one still scrolls internally past the cap.
         Item {
+          id: tabArea
           width: parent.width
-          height: Style.space(360)
+          readonly property real activeContentHeight: {
+            switch (root.currentTab) {
+              case "live": return liveTab.contentHeight
+              case "standings": return standingsTab.contentHeight
+              case "follow": return followTab.contentHeight
+              case "notifications": return notificationsTab.contentHeight
+            }
+            return Style.space(360)
+          }
+          height: Math.min(Style.space(360), Math.max(Style.space(120), activeContentHeight))
 
           Tabs.LiveTab {
+            id: liveTab
             anchors.fill: parent
             visible: root.currentTab === "live"
             service: root.scores
@@ -163,6 +178,7 @@ Panel {
           }
 
           Tabs.StandingsTab {
+            id: standingsTab
             anchors.fill: parent
             visible: root.currentTab === "standings"
             service: root.scores
@@ -172,6 +188,7 @@ Panel {
           }
 
           Tabs.FollowTab {
+            id: followTab
             anchors.fill: parent
             visible: root.currentTab === "follow"
             service: root.scores
@@ -182,6 +199,7 @@ Panel {
           }
 
           Tabs.NotificationsTab {
+            id: notificationsTab
             anchors.fill: parent
             visible: root.currentTab === "notifications"
             service: root.scores
