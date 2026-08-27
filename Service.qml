@@ -87,7 +87,8 @@ Item {
   function addOlympicLeague(slug) {
     var clean = String(slug || "").trim()
     if (!isValidSlug(clean)) return
-    if (followedLeagues.indexOf(clean) === -1) followedLeagues = followedLeagues.concat([clean])
+    if (followedLeagues.indexOf(clean) === -1 && followedLeagues.length < maxFollowedLeagues)
+      followedLeagues = followedLeagues.concat([clean])
     if (olympicLeagues.indexOf(clean) === -1) olympicLeagues = olympicLeagues.concat([clean])
     refreshScoreboards()
     saveDebounce.restart()
@@ -107,7 +108,7 @@ Item {
     for (var i = 0; i < followedLeagues.length; i++) {
       if (Model.sportIdFromSlug(followedLeagues[i]) !== sportId) next.push(followedLeagues[i])
     }
-    for (var j = 0; j < slugsForThatSport.length; j++) next.push(slugsForThatSport[j])
+    for (var j = 0; j < slugsForThatSport.length && next.length < maxFollowedLeagues; j++) next.push(slugsForThatSport[j])
     followedLeagues = next
     _pruneTeamsToFollowedLeagues()
     refreshScoreboards()
@@ -119,13 +120,32 @@ Item {
   // curl call already being injection-safe — it just keeps obviously junk
   // input (whitespace, control chars, absurd length) out of the fetch URL
   // and out of the persisted followed-leagues list.
+  //
+  // Also reject any path segment literally named "__proto__": the regex
+  // alone would happily accept it (it's just letters/underscores), and this
+  // slug ends up as a *key* on several plain-object dictionaries below
+  // (liveMatchesByLeague, teamsByLeague, standingsByLeague). Those are now
+  // Object.create(null) so the accessor can't actually hijack a prototype
+  // any more — this check is belt-and-suspenders on top of that, not the
+  // only line of defense.
   function isValidSlug(slug) {
-    return slug.length > 0 && slug.length <= 100 && /^[A-Za-z0-9_\-\/]+$/.test(slug)
+    return slug.length > 0 && slug.length <= 100
+      && /^[A-Za-z0-9_\-\/]+$/.test(slug)
+      && slug.split("/").indexOf("__proto__") === -1
   }
+
+  // Hard ceiling on how many leagues can be followed at once. Nothing in
+  // the UI limits this (addCustomLeague/addOlympicLeague accept any count),
+  // and refreshScoreboards() fires one parallel curl process per followed
+  // league on every tick — an unbounded list turns a single refresh into an
+  // unbounded process fan-out, which is both a local resource-exhaustion
+  // risk and impolite to ESPN's unofficial, undocumented API.
+  readonly property int maxFollowedLeagues: 40
 
   function addCustomLeague(slug) {
     var clean = String(slug || "").trim()
     if (!isValidSlug(clean) || followedLeagues.indexOf(clean) !== -1) return
+    if (followedLeagues.length >= maxFollowedLeagues) return
     followedLeagues = followedLeagues.concat([clean])
     refreshScoreboards()
     saveDebounce.restart()
@@ -196,7 +216,11 @@ Item {
       olympicLeagues = Array.isArray(parsed.olympicLeagues) ? parsed.olympicLeagues : []
       followedCountries = Array.isArray(parsed.followedCountries) ? parsed.followedCountries : []
       if (parsed.notifications && typeof parsed.notifications === "object") {
-        var merged = {}
+        // Object.create(null): parsed.notifications comes straight out of
+        // this plugin's own state.json — a key named "__proto__" in there
+        // must not be able to touch this object's prototype (same class of
+        // guard as Api.js's parseStandings on the ESPN-sourced stats keys).
+        var merged = Object.create(null)
         for (var k in notifications) merged[k] = notifications[k]
         for (var k2 in parsed.notifications) merged[k2] = parsed.notifications[k2]
         notifications = merged
@@ -282,7 +306,10 @@ Item {
 
   function ensureTeams(slug) {
     if (teamsByLeague[slug] !== undefined) return
-    var next = {}
+    // Object.create(null): `slug` is user-typed (custom/Olympic league
+    // field) and used directly as a key here — same __proto__ guard as
+    // liveMatchesByLeague below.
+    var next = Object.create(null)
     for (var k in teamsByLeague) next[k] = teamsByLeague[k]
     next[slug] = []
     teamsByLeague = next
@@ -322,7 +349,12 @@ Item {
 
   function _applyScoreboard(slug, raw) {
     var matches = Api.parseScoreboard(raw, slug, Sports.leagueKind(slug))
-    var next = {}
+    // Object.create(null): `slug` is user-typed input (custom/Olympic
+    // league field, only regex/length-checked) used directly as a key here.
+    // A slug of "__proto__" would otherwise let `next[slug] = matches`
+    // (matches is an array, i.e. an object) hijack this dict's own
+    // prototype via the Object.prototype __proto__ accessor.
+    var next = Object.create(null)
     for (var k in liveMatchesByLeague) next[k] = liveMatchesByLeague[k]
     next[slug] = matches
     liveMatchesByLeague = next
@@ -382,7 +414,7 @@ Item {
       root._standingsBusy = false
       if (exitCode === 0 && standingsOut.text.length <= root.maxResponseBytes) {
         var groups = Api.parseStandings(standingsOut.text)
-        var next = {}
+        var next = Object.create(null) // see _applyScoreboard: currentSlug is user-typed, used as a key
         for (var k in root.standingsByLeague) next[k] = root.standingsByLeague[k]
         next[standingsProcess.currentSlug] = groups
         root.standingsByLeague = next
@@ -418,7 +450,7 @@ Item {
       root._teamsBusy = false
       if (exitCode === 0 && teamsOut.text.length <= root.maxResponseBytes) {
         var teams = Api.parseTeams(teamsOut.text)
-        var next = {}
+        var next = Object.create(null) // see _applyScoreboard: currentSlug is user-typed, used as a key
         for (var k in root.teamsByLeague) next[k] = root.teamsByLeague[k]
         next[teamsProcess.currentSlug] = teams
         root.teamsByLeague = next
@@ -431,7 +463,10 @@ Item {
 
   function _detectEvents(slug, matches) {
     var notifyAtAll = notifications.enabled === true
-    var nextSeen = {}
+    // Object.create(null): keyed by m.id below, which is ESPN-sourced
+    // (capStr'd but not otherwise filtered) — same __proto__ guard as the
+    // other dictionaries above, in case a payload ever carries that id.
+    var nextSeen = Object.create(null)
     for (var k in lastSeenMatches) nextSeen[k] = lastSeenMatches[k]
     var sportGlyph = Model.glyphForSlug(slug)
 
@@ -464,9 +499,25 @@ Item {
     saveDebounce.restart()
   }
 
+  // ESPN-sourced text (team names, status/play text) shown verbatim in a
+  // desktop notification: strip C0 control characters (so it can't inject
+  // fake extra lines / terminal escapes into the notification) and
+  // HTML-entity-escape the freedesktop notification body markup subset
+  // (<b>/<i>/<a href>/<img>, interpreted by many notification daemons) so
+  // it can only ever render as plain text — the same intent as this
+  // plugin's `textFormat: Text.PlainText` everywhere in the QML UI, applied
+  // to this second, separate rendering surface.
+  function _sanitizeNotifyText(s) {
+    return String(s || "")
+      .replace(/[\x00-\x1f\x7f]/g, " ")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+  }
+
   function _notify(title, glyph, body) {
-    var safeTitle = String(title || "").replace(/'/g, "'\\''")
-    var safeBody = String(body || "").replace(/'/g, "'\\''")
+    var safeTitle = _sanitizeNotifyText(title).replace(/'/g, "'\\''")
+    var safeBody = _sanitizeNotifyText(body).replace(/'/g, "'\\''")
     var cmd = "if command -v omarchy-notification-send >/dev/null 2>&1; then "
       + "omarchy-notification-send '" + safeTitle + "' '" + safeBody + "' -g '" + glyph + "' -u normal --app-name 'Live Scores'; "
       + "else notify-send -u normal 'Live Scores: " + safeTitle + "' '" + safeBody + "'; fi"

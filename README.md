@@ -89,9 +89,13 @@ This plugin runs unsandboxed inside `omarchy-shell`, like every Omarchy
 plugin, once enabled. What it actually does:
 
 - **Network**: read-only HTTPS GET requests to `site.api.espn.com`
-  (scores, standings, team lists, team crests) via `curl` subprocesses —
-  one per followed league, fired in parallel, only while the plugin is
-  enabled. No credentials, no writes.
+  (scores, standings, team lists) via `curl` subprocesses — one per
+  followed league, fired in parallel, only while the plugin is enabled,
+  capped at 5 MiB and an 8s timeout per request. No credentials, no
+  writes. Team crest images are the one exception to the `curl` path:
+  they're loaded directly by Qt's own `Image` element (not size/timeout
+  capped the way the `curl` calls are), restricted to `https://` URLs on
+  ESPN's own logo CDN (`*.espncdn.com`) only.
 - **Commands executed**: `curl` (ESPN requests) and, for notifications,
   `omarchy-notification-send` with a `notify-send` fallback if that binary
   isn't present.

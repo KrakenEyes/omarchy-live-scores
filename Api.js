@@ -23,13 +23,18 @@ function capStr(value, maxLen) {
   return s.length > maxLen ? s.slice(0, maxLen) : s
 }
 
-// Logo hrefs become an Image.source in the UI — reject anything that isn't
-// an https URL (file://, javascript:, or any other scheme) before it ever
-// reaches there, rather than trusting ESPN's JSON to only ever contain what
-// today's payloads happen to contain.
+// Logo hrefs become an Image.source in the UI — that's a straight HTTP(S)
+// fetch made by Qt itself, not through the size/timeout-capped curl calls
+// this plugin otherwise uses for every other request. Reject anything that
+// isn't an https URL on ESPN's own logo CDN (file://, javascript:, or any
+// other scheme/host) before it ever reaches there, rather than trusting
+// ESPN's JSON to only ever contain what today's payloads happen to contain
+// — a compromised/MITM'd response pointing this at an arbitrary host would
+// otherwise make the plugin fetch from it, silently, outside the network
+// surface documented in the README.
 function safeImageUrl(value) {
   var s = capStr(value, MAX_URL_LEN)
-  return /^https:\/\//.test(s) ? s : ""
+  return /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.espncdn\.com\//i.test(s) ? s : ""
 }
 
 function scoreboardUrl(slug, dateStr) {
