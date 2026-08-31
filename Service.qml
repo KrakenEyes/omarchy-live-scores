@@ -204,6 +204,103 @@ Item {
     }, null, 2)
   }
 
+  // ------------------------------------------------- state trust boundary
+  //
+  // maxFollowedLeagues (above) only caps the interactive addCustomLeague/
+  // addOlympicLeague/setLeaguesForSport paths. state.json is loaded on
+  // every plugin start *and* every time it changes on disk (see the
+  // content-free FileView below), and nothing forces it to have gone
+  // through those paths — it's just as plugin-writable by anything else
+  // running as this user as it is by this plugin. A crafted state.json
+  // with a huge followedLeagues array would otherwise reach
+  // refreshScoreboards() (one curl process per followed league, fired in
+  // parallel) and refreshStandingsForFollowed() completely unchecked, and
+  // the other loaded lists/dicts would grow the in-memory model without
+  // bound. So every one of the five properties state.json can set gets the
+  // same allowlist/cardinality/string-value limits here that the
+  // interactive paths already apply, before stateLoaded flips true and
+  // before either refresh call fires — this, not the UI, is the real trust
+  // boundary. Mirrors Api.js's own MAX_EVENTS/MAX_STR_LEN ceilings on
+  // ESPN's untrusted payloads; capStr is reused straight from there.
+
+  readonly property int maxFollowedTeams: 2500       // ~40 leagues * ~60 teams, generously rounded
+  readonly property int maxFollowedCountries: 300     // more than every IOC country code that exists
+  readonly property int maxLastSeenMatches: 3000
+  readonly property int maxStateStrLen: 300           // matches Api.js's MAX_STR_LEN
+
+  function _capLeagueList(list) {
+    var out = []
+    if (!Array.isArray(list)) return out
+    var seen = Object.create(null)
+    for (var i = 0; i < list.length && out.length < maxFollowedLeagues; i++) {
+      var slug = String(list[i] || "")
+      if (isValidSlug(slug) && seen[slug] === undefined) { seen[slug] = true; out.push(slug) }
+    }
+    return out
+  }
+
+  // Teams are only meaningful for a league that's actually followed —
+  // validLeagues is the already-capped/allowlisted result of
+  // _capLeagueList, so this can't reintroduce a league that didn't survive
+  // that check.
+  function _capTeamList(list, validLeagues) {
+    var out = []
+    if (!Array.isArray(list)) return out
+    var leagueSet = Object.create(null)
+    for (var i = 0; i < validLeagues.length; i++) leagueSet[validLeagues[i]] = true
+    for (var j = 0; j < list.length && out.length < maxFollowedTeams; j++) {
+      var t = list[j]
+      if (!t || typeof t !== "object") continue
+      var league = String(t.league || "")
+      if (leagueSet[league] === undefined) continue
+      out.push({ league: league, id: Api.capStr(t.id, maxStateStrLen), name: Api.capStr(t.name, maxStateStrLen) })
+    }
+    return out
+  }
+
+  function _capOlympicLeagues(list, validLeagues) {
+    var out = []
+    if (!Array.isArray(list)) return out
+    var leagueSet = Object.create(null)
+    for (var i = 0; i < validLeagues.length; i++) leagueSet[validLeagues[i]] = true
+    for (var j = 0; j < list.length && out.length < maxFollowedLeagues; j++) {
+      var slug = String(list[j] || "")
+      if (isValidSlug(slug) && leagueSet[slug] !== undefined) out.push(slug)
+    }
+    return out
+  }
+
+  function _capCountryList(list) {
+    var out = []
+    if (!Array.isArray(list)) return out
+    for (var i = 0; i < list.length && out.length < maxFollowedCountries; i++) out.push(Api.capStr(list[i], maxStateStrLen))
+    return out
+  }
+
+  function _capLastSeenMatches(obj) {
+    // Object.create(null): matchId keys come straight from state.json —
+    // same __proto__ guard as every other dict keyed by external input in
+    // this file (see _applyScoreboard).
+    var out = Object.create(null)
+    if (!obj || typeof obj !== "object") return out
+    var count = 0
+    for (var id in obj) {
+      if (count >= maxLastSeenMatches) break
+      if (id === "__proto__" || id === "constructor" || id === "prototype") continue
+      var v = obj[id]
+      if (!v || typeof v !== "object") continue
+      var rec = { state: Api.capStr(v.state, maxStateStrLen), kind: Api.capStr(v.kind, maxStateStrLen) }
+      if (v.kind !== "leaderboard") {
+        rec.homeScore = Api.capStr(v.homeScore, maxStateStrLen)
+        rec.awayScore = Api.capStr(v.awayScore, maxStateStrLen)
+        rec.lastPlay = Api.capStr(v.lastPlay, maxStateStrLen)
+      }
+      out[Api.capStr(id, maxStateStrLen)] = rec
+      count++
+    }
+    return out
+  }
+
   function _applyState(raw) {
     var text = String(raw || "").trim()
     var parsed = null
@@ -211,10 +308,11 @@ Item {
       try { parsed = JSON.parse(text) } catch (e) { parsed = null }
     }
     if (parsed && typeof parsed === "object") {
-      followedLeagues = Array.isArray(parsed.followedLeagues) ? parsed.followedLeagues : []
-      followedTeams = Array.isArray(parsed.followedTeams) ? parsed.followedTeams : []
-      olympicLeagues = Array.isArray(parsed.olympicLeagues) ? parsed.olympicLeagues : []
-      followedCountries = Array.isArray(parsed.followedCountries) ? parsed.followedCountries : []
+      var leagues = _capLeagueList(parsed.followedLeagues)
+      followedLeagues = leagues
+      followedTeams = _capTeamList(parsed.followedTeams, leagues)
+      olympicLeagues = _capOlympicLeagues(parsed.olympicLeagues, leagues)
+      followedCountries = _capCountryList(parsed.followedCountries)
       if (parsed.notifications && typeof parsed.notifications === "object") {
         // Object.create(null): parsed.notifications comes straight out of
         // this plugin's own state.json — a key named "__proto__" in there
@@ -222,10 +320,13 @@ Item {
         // guard as Api.js's parseStandings on the ESPN-sourced stats keys).
         var merged = Object.create(null)
         for (var k in notifications) merged[k] = notifications[k]
-        for (var k2 in parsed.notifications) merged[k2] = parsed.notifications[k2]
+        for (var k2 in parsed.notifications) {
+          if (k2 === "__proto__" || k2 === "constructor" || k2 === "prototype") continue
+          merged[k2] = parsed.notifications[k2]
+        }
         notifications = merged
       }
-      lastSeenMatches = (parsed.lastSeenMatches && typeof parsed.lastSeenMatches === "object") ? parsed.lastSeenMatches : {}
+      lastSeenMatches = _capLastSeenMatches(parsed.lastSeenMatches)
     }
     stateLoaded = true
     refreshScoreboards()
@@ -236,20 +337,106 @@ Item {
     id: saveDebounce
     interval: 500
     repeat: false
-    onTriggered: if (root.stateLoaded) stateFile.setText(root._serialize())
+    onTriggered: if (root.stateLoaded) root._writeStateSafely()
   }
 
   readonly property string statePath: Qt.resolvedUrl("data/state.json").toString().replace(/^file:\/\//, "")
+  readonly property string _readScriptPath: Qt.resolvedUrl("scripts/safe_read_state.py").toString().replace(/^file:\/\//, "")
+  readonly property string _writeScriptPath: Qt.resolvedUrl("scripts/safe_write_state.py").toString().replace(/^file:\/\//, "")
+  readonly property int maxStateBytes: 2 * 1024 * 1024 // 2 MiB — generous over any legitimate state.json
 
+  // state.json is predictable and plugin-writable, so anything else
+  // running as this user can replace it with a FIFO, an oversized file, or
+  // a symlink before this reads or rewrites it. FileView's own
+  // preload/text()/setText() go through Qt's normal open() calls, which
+  // follow symlinks and — for a preloaded FileView — read the target
+  // wholesale with no size cap and no O_NONBLOCK: a FIFO here would hang
+  // the open, an oversized file would be read entirely into this
+  // long-lived shell process, and a symlink would silently redirect the
+  // read (or a non-atomic write) at some other file this user can write
+  // to. So this FileView is kept content-free — text()/setText()/data()/
+  // reload() are never called on it — and used only to detect that the
+  // file changed on disk. The actual read and write happen in
+  // safe_read_state.py / safe_write_state.py (see scripts/), run as
+  // short-lived Processes exactly like every curl call in this file:
+  // O_NOFOLLOW|O_NONBLOCK bound to one descriptor for the read, a private
+  // O_EXCL temp file + atomic rename for the write.
   FileView {
-    id: stateFile
+    id: stateFileWatcher
     path: root.statePath
     watchChanges: true
+    preload: false
     printErrors: false
-    onLoaded: root._applyState(text())
-    onLoadFailed: root._applyState("")
-    onFileChanged: reload()
+    onFileChanged: root._readStateSafely()
   }
+
+  Component {
+    id: stateReaderComponent
+    Process {
+      id: stateReader
+      command: []
+      stdout: StdioCollector { id: stateReaderOut; waitForEnd: true }
+      function start() {
+        stateReader.command = ["python3", root._readScriptPath, root.statePath, String(root.maxStateBytes)]
+        stateReader.running = true
+      }
+      onExited: function(exitCode) {
+        if (exitCode === 0) {
+          root._applyState(stateReaderOut.text)
+        } else if (!root.stateLoaded) {
+          // First load, nothing at stake yet either way: exit 2 (no file —
+          // first run) and exit 1 (rejected — a hostile replacement was
+          // already in place before the plugin ever started) both fall
+          // back to empty state so the timers below still start.
+          root._applyState("")
+        }
+        // A reload triggered by a later on-disk change that gets rejected
+        // (exit 1) is deliberately *not* applied here: this plugin already
+        // has good in-memory state from an earlier successful load, and a
+        // hostile file swapped in afterwards shouldn't be able to wipe it
+        // out just by being unreadable — that would turn "reject the bad
+        // file" into "the attacker can still blank your followed leagues".
+        stateReader.destroy()
+      }
+    }
+  }
+
+  function _readStateSafely() {
+    var reader = stateReaderComponent.createObject(root, {})
+    if (reader) reader.start()
+  }
+
+  Component {
+    id: stateWriterComponent
+    Process {
+      id: stateWriter
+      property string content: ""
+      command: []
+      function start() {
+        stateWriter.command = ["python3", root._writeScriptPath, root.statePath, stateWriter.content]
+        stateWriter.running = true
+      }
+      onExited: stateWriter.destroy()
+    }
+  }
+
+  function _writeStateSafely() {
+    var writer = stateWriterComponent.createObject(root, { content: root._serialize() })
+    if (writer) writer.start()
+  }
+
+  // Fallback for the very first read never completing at all (e.g. python3
+  // missing from PATH — see README's dependencies) rather than completing
+  // with a non-zero exit code: without this, stateLoaded would stay false
+  // forever and the polling timers below would never start.
+  Timer {
+    interval: 5000
+    repeat: false
+    running: true
+    onTriggered: if (!root.stateLoaded) root._applyState("")
+  }
+
+  Component.onCompleted: root._readStateSafely()
 
   // ---------------------------------------------------------------- live data
 

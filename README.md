@@ -96,12 +96,24 @@ plugin, once enabled. What it actually does:
   they're loaded directly by Qt's own `Image` element (not size/timeout
   capped the way the `curl` calls are), restricted to `https://` URLs on
   ESPN's own logo CDN (`*.espncdn.com`) only.
-- **Commands executed**: `curl` (ESPN requests) and, for notifications,
-  `omarchy-notification-send` with a `notify-send` fallback if that binary
-  isn't present.
+- **Commands executed**: `curl` (ESPN requests); `python3` (bundled
+  `scripts/safe_read_state.py` / `safe_write_state.py`, see below); and,
+  for notifications, `omarchy-notification-send` with a `notify-send`
+  fallback if that binary isn't present.
 - **Files**: reads/writes only its own `data/state.json` inside the
   plugin's directory (followed leagues/teams/countries, notification
   preferences). Nothing outside the plugin's own folder is touched.
+  `state.json` is at a predictable, plugin-writable path, so it's read and
+  written defensively rather than through a plain file open: the read is
+  bound to a single `O_NOFOLLOW | O_NONBLOCK` descriptor and a byte cap
+  (rejects a symlink, a FIFO, or an oversized file instead of following,
+  blocking on, or fully loading it), and the write lands in a private
+  `O_EXCL` temp file first, then gets `rename()`d into place atomically
+  (never opens — and so never writes through — whatever is currently at
+  that path). Whatever `state.json` loads is also re-validated against the
+  same league/team/country allowlist and count limits the panel UI
+  enforces, before anything gets fetched from ESPN — loading it isn't a
+  shortcut around those limits.
 - **Background behavior**: two polling timers while enabled — one for live
   matches (configurable idle rate, default 20s, automatically dropping to
   a faster configurable rate, default 5s, while a followed match is live),
